@@ -4,86 +4,274 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CoD Team Randomizer</title>
+    <!-- Fonts and Icons -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
+    <!-- Material Components for the Web -->
+    <link rel="stylesheet" href="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.css">
+    <script src="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.js"></script>
+
     <style>
-        body { font-family: Arial, sans-serif; background: #0a0a0a; color: #fff; margin: 0; padding: 20px; max-width: 600px; margin: auto; }
-        .section { margin: 20px 0; padding: 20px; border: 1px solid #333; border-radius: 10px; background: #1a1a1a; }
-        input { background: #333; color: #fff; border: 1px solid #555; padding: 10px; border-radius: 5px; width: 100%; margin: 5px 0; }
-        button { background: #ff4444; color: white; border: none; padding: 12px 20px; border-radius: 5px; cursor: pointer; font-size: 16px; margin: 5px; }
-        button:hover { background: #cc0000; }
-        button.secondary { background: #444; }
-        button.secondary:hover { background: #666; }
-        .team { display: flex; flex-wrap: wrap; justify-content: center; }
-        .player { background: #444; padding: 15px; margin: 10px; border-radius: 10px; text-align: center; min-width: 120px; box-shadow: 0 4px 8px rgba(0,0,0,0.5); }
-        .alfa .player { border: 3px solid #00ff00; }
-        .beta .player { border: 3px solid #ff0000; }
-        .stats-table { width: 100%; border-collapse: collapse; }
-        .stats-table th, .stats-table td { padding: 10px; border: 1px solid #555; text-align: center; }
-        .stats-table th { background: #333; }
-        #history { max-height: 300px; overflow-y: auto; }
-        .history-item { padding: 10px; margin: 5px 0; background: #222; border-radius: 5px; font-size: 14px; }
-        .vote-btn { font-size: 24px; margin: 10px; }
+        :root {
+            --mdc-theme-primary: #0d47a1; /* Deep Blue */
+            --mdc-theme-secondary: #00e5ff; /* Cyan Accent */
+            --mdc-theme-background: #121212;
+            --mdc-theme-surface: #1e1e1e;
+            --mdc-theme-on-primary: #ffffff;
+            --mdc-theme-on-secondary: #000000;
+            --mdc-theme-on-surface: #ffffff;
+            --team-alfa-color: #00ff7f; /* Spring Green */
+            --team-beta-color: #ff4444; /* Red */
+        }
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--mdc-theme-background);
+            color: var(--mdc-theme-on-surface);
+            margin: 0;
+            padding: 16px;
+        }
+        .container {
+            max-width: 800px;
+            margin: auto;
+        }
+        .mdc-card {
+            margin-bottom: 24px;
+            background-color: var(--mdc-theme-surface);
+            border-radius: 8px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+            transition: all 0.3s ease-in-out;
+        }
+        .mdc-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px rgba(0,0,0,0.5);
+        }
+        .card-header {
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .card-header .material-icons {
+            margin-right: 16px;
+            color: var(--mdc-theme-secondary);
+        }
+        .card-content {
+            padding: 16px;
+        }
+        h1 {
+            font-weight: 300;
+            text-align: center;
+            color: var(--mdc-theme-secondary);
+            margin-bottom: 32px;
+        }
+        h1 .material-icons {
+            font-size: 2.5rem;
+            vertical-align: middle;
+        }
+        .mdc-text-field {
+            width: 100%;
+            margin-bottom: 8px !important;
+        }
+        .team {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-around;
+            margin-top: 16px;
+        }
+        .player {
+            padding: 12px;
+            margin: 8px;
+            border-radius: 8px;
+            text-align: center;
+            min-width: 140px;
+            border: 2px solid transparent;
+            background: rgba(255,255,255,0.05);
+            transition: transform 0.2s;
+        }
+        .player:hover {
+            transform: scale(1.05);
+        }
+        .alfa .player {
+            border-color: var(--team-alfa-color);
+            box-shadow: 0 0 12px var(--team-alfa-color);
+        }
+        .beta .player {
+            border-color: var(--team-beta-color);
+            box-shadow: 0 0 12px var(--team-beta-color);
+        }
+        #history {
+            max-height: 300px;
+            overflow-y: auto;
+            padding-right: 8px;
+        }
+        .history-item {
+            padding: 12px;
+            margin: 8px 0;
+            background: rgba(0,0,0,0.2);
+            border-left: 4px solid var(--mdc-theme-secondary);
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .stats-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .stats-table th, .stats-table td {
+            padding: 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            text-align: center;
+        }
+        .stats-table th {
+            color: var(--mdc-theme-secondary);
+        }
         .hidden { display: none; }
-        #voting { text-align: center; margin: 20px 0; }
-        .score-input { width: 60px; text-align: center; }
+        .button-group {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 16px;
+        }
+        .vote-btn .mdc-button__label {
+            font-size: 1.2rem;
+        }
+        #wyniki h3 {
+          margin-top: 24px;
+        }
+        .alfa h3 { color: var(--team-alfa-color); }
+        .beta h3 { color: var(--team-beta-color); }
     </style>
 </head>
-<body>
-    <h1>🎮 CoD Team Randomizer</h1>
+<body class="mdc-typography">
+    <div class="container">
+        <h1><i class="material-icons">videogame_asset</i> CoD Team Randomizer</h1>
 
-    <!-- 1. Edycja listy graczy -->
-    <div class="section">
-        <h2>👥 Edytuj Graczy</h2>
-        <div id="players-list"></div>
-        <button onclick="savePlayers()">💾 Zapisz Graczy</button>
-    </div>
-
-    <!-- 2+3. Losowanie i wyniki -->
-    <div class="section">
-        <h2>🎲 Losuj Składy</h2>
-        <button onclick="losuj()">🎯 LOSUJ TERAZ!</button>
-        <button onclick="loadLast()" class="secondary">📜 Wczytaj Ostatnie</button>
-        <div id="wyniki" class="hidden">
-            <h3>Drużyna Alfa 🟢</h3>
-            <div id="alfa" class="team alfa"></div>
-            <h3>Drużyna Beta 🔴</h3>
-            <div id="beta" class="team beta"></div>
-            <div id="voting">
-                <button class="vote-btn" onclick="vote(true)">👍 Like (0)</button>
-                <button class="vote-btn" onclick="vote(false)">👎 Dislike (0)</button>
-                <span id="vote-count"></span>
+        <!-- 1. Edycja listy graczy -->
+        <div class="mdc-card">
+            <div class="card-header">
+                <i class="material-icons">groups</i>
+                <h2 class="mdc-typography--headline6">Edytuj Graczy</h2>
             </div>
-            <!-- Wyniki meczów -->
-            <div style="text-align: center; margin: 20px 0;">
-                <h4>🏆 Wynik Meczu</h4>
-                <label>Alfa: <input id="score-alfa" class="score-input" type="number" value="0"></label>
-                vs
-                <label>Beta: <input id="score-beta" class="score-input" type="number" value="0"></label>
-                <br><button onclick="saveScore()">💾 Zapisz Wynik</button>
+            <div class="card-content">
+                <div id="players-list"></div>
+                <div class="button-group">
+                    <button class="mdc-button mdc-button--raised" onclick="savePlayers()">
+                        <span class="mdc-button__ripple"></span>
+                        <i class="material-icons mdc-button__icon" aria-hidden="true">save</i>
+                        <span class="mdc-button__label">Zapisz Graczy</span>
+                    </button>
+                </div>
             </div>
-            <button onclick="copyToClipboard()">📋 Kopiuj do Schowka</button>
         </div>
-    </div>
 
-    <!-- 4. Historia -->
-    <div class="section">
-        <h2>📚 Historia Losowań</h2>
-        <div id="history"></div>
-    </div>
+        <!-- 2+3. Losowanie i wyniki -->
+        <div class="mdc-card">
+            <div class="card-header">
+                <i class="material-icons">casino</i>
+                <h2 class="mdc-typography--headline6">Losuj Składy</h2>
+            </div>
+            <div class="card-content">
+                <div class="button-group">
+                    <button class="mdc-button mdc-button--raised" onclick="losuj()">
+                        <span class="mdc-button__ripple"></span>
+                        <i class="material-icons mdc-button__icon" aria-hidden="true">casino</i>
+                        <span class="mdc-button__label">LOSUJ TERAZ!</span>
+                    </button>
+                    <button class="mdc-button" onclick="loadLast()">
+                        <span class="mdc-button__ripple"></span>
+                        <i class="material-icons mdc-button__icon" aria-hidden="true">history</i>
+                        <span class="mdc-button__label">Wczytaj Ostatnie</span>
+                    </button>
+                </div>
 
-    <!-- Statystyki -->
-    <div class="section">
-        <h2>📊 Statystyki Graczy</h2>
-        <table class="stats-table">
-            <thead><tr><th>Gracz</th><th>Mecze</th><th>Wygrane</th><th>Winrate</th></tr></thead>
-            <tbody id="stats"></tbody>
-        </table>
+                <div id="wyniki" class="hidden">
+                    <div class="mdc-layout-grid">
+                        <div class="mdc-layout-grid__inner">
+                            <div class="mdc-layout-grid__cell--span-6 alfa">
+                                <h3>Drużyna Alfa</h3>
+                                <div id="alfa" class="team"></div>
+                            </div>
+                            <div class="mdc-layout-grid__cell--span-6 beta">
+                                <h3>Drużyna Beta</h3>
+                                <div id="beta" class="team"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="voting" style="text-align: center; margin: 20px 0;">
+                        <div class="button-group" style="justify-content: center;">
+                             <button class="mdc-button mdc-button--raised vote-btn" onclick="vote(true)">
+                                <span class="mdc-button__ripple"></span>
+                                <span class="mdc-button__label">👍</span>
+                            </button>
+                             <button class="mdc-button mdc-button--raised vote-btn" onclick="vote(false)" style="--mdc-theme-primary: var(--team-beta-color); --mdc-theme-on-primary: #fff;">
+                                <span class="mdc-button__ripple"></span>
+                                <span class="mdc-button__label">👎</span>
+                            </button>
+                        </div>
+                         <p id="vote-count" class="mdc-typography--body1"></p>
+                    </div>
+
+                    <div style="text-align: center; margin: 20px 0;">
+                        <h4 class="mdc-typography--subtitle1">🏆 Wynik Meczu</h4>
+                        <div class="button-group" style="justify-content: center; align-items: center;">
+                             <div class="mdc-text-field mdc-text-field--outlined score-input" style="width: 80px;">
+                                <input type="number" id="score-alfa" class="mdc-text-field__input" value="0">
+                                <div class="mdc-notched-outline"><div class="mdc-notched-outline__leading"></div><div class="mdc-notched-outline__notch"><label class="mdc-floating-label">Alfa</label></div><div class="mdc-notched-outline__trailing"></div></div>
+                            </div>
+                            <span>vs</span>
+                            <div class="mdc-text-field mdc-text-field--outlined score-input" style="width: 80px;">
+                                <input type="number" id="score-beta" class="mdc-text-field__input" value="0">
+                                <div class="mdc-notched-outline"><div class="mdc-notched-outline__leading"></div><div class="mdc-notched-outline__notch"><label class="mdc-floating-label">Beta</label></div><div class="mdc-notched-outline__trailing"></div></div>
+                            </div>
+                        </div>
+                        <button class="mdc-button mdc-button--raised" onclick="saveScore()">
+                            <span class="mdc-button__ripple"></span>
+                            <i class="material-icons mdc-button__icon">save</i>
+                            <span class="mdc-button__label">Zapisz Wynik</span>
+                        </button>
+                    </div>
+
+                    <div class="button-group" style="justify-content: center;">
+                        <button class="mdc-button" onclick="copyToClipboard()">
+                            <span class="mdc-button__ripple"></span>
+                            <i class="material-icons mdc-button__icon">content_copy</i>
+                            <span class="mdc-button__label">Kopiuj do Schowka</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. Historia -->
+        <div class="mdc-card">
+            <div class="card-header">
+                <i class="material-icons">history</i>
+                <h2 class="mdc-typography--headline6">Historia Losowań</h2>
+            </div>
+            <div class="card-content">
+                <div id="history"></div>
+            </div>
+        </div>
+
+        <!-- Statystyki -->
+        <div class="mdc-card">
+            <div class="card-header">
+                <i class="material-icons">leaderboard</i>
+                <h2 class="mdc-typography--headline6">Statystyki Graczy</h2>
+            </div>
+            <div class="card-content">
+                <table class="stats-table">
+                    <thead><tr><th>Gracz</th><th>Mecze</th><th>Wygrane</th><th>Winrate</th></tr></thead>
+                    <tbody id="stats"></tbody>
+                </table>
+            </div>
+        </div>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
     <script>
-        // Wklej tutaj konfigurację swojego projektu Firebase
-        // Możesz ją znaleźć w konsoli Firebase > Ustawienia projektu
+        const mdc = mdc.autoInit();
         const firebaseConfig = {
             apiKey: "AIzaSyDv3TlaoXP1Jte4rk7G_Oe5-ebaIBiMEJc",
             authDomain: "kolo-a53dd.firebaseapp.com",
@@ -93,79 +281,70 @@
             appId: "1:40469026968:web:6ee82883834e2f05e3d8ed",
             measurementId: "G-7HDTPRQNMS"
         };
-
-        // Inicjalizacja Firebase
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
-        let gracze = []; // Zostanie załadowane z Firebase
-        let currentSkład = null; // Aktualnie wylosowany skład
-        let currentSkładId = null; // ID dokumentu aktualnego składu w kolekcji 'draws'
-
-        // ===== INICJALIZACJA I SYNCHRONIZACJA DANYCH =====
+        let gracze = []; 
+        let currentSkład = null; 
+        let currentSkładId = null;
 
         function init() {
-            // Nasłuchuj zmian na liście graczy
             db.collection('config').doc('players').onSnapshot(doc => {
                 if (doc.exists && doc.data().list) {
                     gracze = doc.data().list;
-                    console.log("Zaktualizowano listę graczy:", gracze);
                 } else {
-                    // Jeśli nie ma listy graczy w bazie, stwórz domyślną
                     gracze = Array.from({ length: 8 }, (_, i) => `Gracz ${i + 1}`);
                     db.collection('config').doc('players').set({ list: gracze });
                 }
                 renderPlayersList();
             });
 
-            // Nasłuchuj zmian w historii losowań (ostatnie 20)
             db.collection('draws').orderBy('timestamp', 'desc').limit(20).onSnapshot(snapshot => {
                 const historia = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                console.log("Zaktualizowano historię:", historia);
                 renderHistory(historia);
             });
             
-            // Nasłuchuj na żywo aktualnego losowania
             db.collection('current_draw').doc('live').onSnapshot(doc => {
                 if (doc.exists) {
                     currentSkład = doc.data();
                     currentSkładId = currentSkład.historyId;
-                    console.log("Otrzymano aktualne losowanie:", currentSkład);
                     renderWyniki();
                 } else {
                     document.getElementById('wyniki').classList.add('hidden');
                 }
             });
 
-            // Nasłuchuj zmian w statystykach
             db.collection('stats').onSnapshot(snapshot => {
                 const stats = {};
                 snapshot.forEach(doc => {
                     stats[doc.id] = doc.data();
                 });
-                console.log("Zaktualizowano statystyki:", stats);
                 renderStats(stats);
             });
         }
 
-        // ===== ZARZĄDZANIE GRACZAMI =====
-
         function renderPlayersList() {
             const list = document.getElementById('players-list');
             list.innerHTML = '';
-            // Upewnij się, że zawsze jest 8 pól do wpisu
             const displayGracze = gracze.concat(Array(Math.max(0, 8 - gracze.length)).fill(''));
             displayGracze.slice(0, 8).forEach((nick, i) => {
-                const div = document.createElement('div');
-                div.innerHTML = `<input id="player${i}" value="${nick}" placeholder="Nick ${i + 1}">`;
-                list.appendChild(div);
+                const textField = document.createElement('div');
+                textField.className = 'mdc-text-field mdc-text-field--filled';
+                textField.innerHTML = '
+                    <span class="mdc-text-field__ripple"></span>
+                    <input id="player' + i + '" class="mdc-text-field__input" value="' + nick + '" placeholder=" ">
+                    <label for="player' + i + '" class="mdc-floating-label">Nick ' + (i + 1) + '</label>
+                    <span class="mdc-line-ripple"></span>
+                ';
+                list.appendChild(textField);
+                mdc.textField.MDCTextField.attachTo(textField);
             });
         }
 
         function savePlayers() {
             const newGracze = [];
             for (let i = 0; i < 8; i++) {
-                const nick = document.getElementById(`player${i}`).value.trim();
+                const nick = document.getElementById('player' + i).value.trim();
                 if(nick) newGracze.push(nick);
             }
             if (newGracze.length !== 8) {
@@ -173,11 +352,9 @@
                 return;
             }
             db.collection('config').doc('players').set({ list: newGracze })
-                .then(() => alert('Gracze zapisani w chmurze! ☁️'))
+                .then(() => showSnackbar('Gracze zapisani w chmurze! ☁️'))
                 .catch(err => console.error("Błąd zapisu graczy: ", err));
         }
-
-        // ===== LOSOWANIE SKŁADÓW =====
 
         async function losuj() {
             if (gracze.length !== 8) {
@@ -191,21 +368,16 @@
                 timestamp: firebase.firestore.FieldValue.serverTimestamp(),
                 likes: 0,
                 dislikes: 0,
-                votes: {} // { 'playerName': 'like'/'dislike' }
+                votes: {} 
             };
 
             try {
-                // 1. Dodaj do historii i pobierz ID
                 const historyDocRef = await db.collection('draws').add(newSkład);
-                console.log("Dodano do historii, ID:", historyDocRef.id);
-
-                // 2. Ustaw jako aktualne losowanie, dodając ID z historii
                 await db.collection('current_draw').doc('live').set({
                     ...newSkład,
                     historyId: historyDocRef.id,
-                    timestamp: new Date().toISOString() // Użyj stringa dla 'live' bo onSnapshot nie lubi serverTimestamp
+                    timestamp: new Date().toISOString()
                 });
-                console.log("Ustawiono jako aktualne losowanie.");
             } catch (err) {
                 console.error("Błąd podczas losowania: ", err);
                 alert("Wystąpił błąd, sprawdź konsolę.");
@@ -221,16 +393,18 @@
                 currentSkład[team].forEach(nick => {
                     const player = document.createElement('div');
                     player.className = 'player';
-                    player.innerHTML = `<div style="font-size:20px;">${nick}</div>`;
+                    player.innerHTML = `<div style="font-size:1rem;">${nick}</div>`;
                     cont.appendChild(player);
                 });
             });
             updateVoteDisplay();
-            // Pokaż/ukryj panel do głosowania
             document.getElementById('voting').classList.toggle('hidden', currentSkład.winner);
-            // Resetuj i pokaż pola do wyniku
-            document.getElementById('score-alfa').value = currentSkład.scoreA || 0;
-            document.getElementById('score-beta').value = currentSkład.scoreB || 0;
+            const scoreAEl = document.getElementById('score-alfa');
+            const scoreBEl = document.getElementById('score-beta');
+            if (scoreAEl.mdcTextField) scoreAEl.mdcTextField.value = currentSkład.scoreA || 0;
+            else scoreAEl.value = currentSkład.scoreA || 0;
+            if (scoreBEl.mdcTextField) scoreBEl.mdcTextField.value = currentSkład.scoreB || 0;
+            else scoreBEl.value = currentSkład.scoreB || 0;
         }
         
         async function loadLast() {
@@ -243,33 +417,26 @@
                     historyId: lastDrawDoc.id,
                     timestamp: lastDrawData.timestamp.toDate().toISOString()
                 });
-                console.log("Wczytano ostatnie losowanie.");
             } else {
                 alert("Brak historii losowań.");
             }
         }
 
-        // ===== GŁOSOWANIE I WYNIKI =====
-
         function vote(isLike) {
-            // Prosta implementacja - w prawdziwej aplikacji potrzebny byłby system uwierzytelniania,
-            // aby wiedzieć, który gracz głosuje. Tutaj upraszczamy, że każdy klik to jeden głos.
             if (!currentSkładId) return;
-
             const updateField = isLike ? 'likes' : 'dislikes';
-            db.collection('draws').doc(currentSkładId).update({
-                [updateField]: firebase.firestore.FieldValue.increment(1)
-            });
-            db.collection('current_draw').doc('live').update({
-                [updateField]: firebase.firestore.FieldValue.increment(1)
-            });
+            const increment = firebase.firestore.FieldValue.increment(1);
+            db.collection('draws').doc(currentSkładId).update({ [updateField]: increment });
+            db.collection('current_draw').doc('live').update({ [updateField]: increment });
         }
         
         function updateVoteDisplay() {
             const likes = currentSkład.likes || 0;
             const dislikes = currentSkład.dislikes || 0;
-            document.querySelector('#voting button:first-child').textContent = `👍 Like (${likes})`;
-            document.querySelector('#voting button:last-child').textContent = `👎 Dislike (${dislikes})`;
+            const likeBtn = document.querySelector('#voting button:first-child .mdc-button__label');
+            const dislikeBtn = document.querySelector('#voting button:last-child .mdc-button__label');
+            likeBtn.textContent = `👍 (${likes})`;
+            dislikeBtn.textContent = `👎 (${dislikes})`;
             document.getElementById('vote-count').textContent = `Głosy: ${likes + dislikes}/8`;
         }
 
@@ -286,35 +453,21 @@
                 return;
             }
             const winnerTeamName = scoreA > scoreB ? 'alfa' : 'beta';
-            const winnerTeamPlayers = currentSkład[winnerTeamName];
-            const loserTeamName = winnerTeamName === 'alfa' ? 'beta' : 'alfa';
-            const loserTeamPlayers = currentSkład[loserTeamName];
             
-            const updates = {
-                winner: winnerTeamName,
-                scoreA: scoreA,
-                scoreB: scoreB
-            };
+            const updates = { winner: winnerTeamName, scoreA: scoreA, scoreB: scoreB };
 
             try {
-                // Zaktualizuj dokument w historii i w aktualnym losowaniu
                 await db.collection('draws').doc(currentSkładId).update(updates);
                 await db.collection('current_draw').doc('live').update(updates);
-                
-                // Zaktualizuj statystyki graczy w transakcji
-                await updateStats(winnerTeamPlayers, loserTeamPlayers);
-
-                alert(`🏆 Zapisano: ${scoreA}-${scoreB} (Wygrywa: ${winnerTeamName.toUpperCase()})`);
+                await updateStats(currentSkład[winnerTeamName], currentSkład[winnerTeamName === 'alfa' ? 'beta' : 'alfa']);
+                showSnackbar(`🏆 Zapisano: ${scoreA}-${scoreB} (Wygrywa: ${winnerTeamName.toUpperCase()})`);
             } catch (err) {
                 console.error("Błąd przy zapisie wyniku: ", err);
-                alert("Wystąpił błąd, sprawdź konsolę.");
             }
         }
 
         function updateStats(winners, losers) {
             const batch = db.batch();
-            
-            // Zwycięzcy
             winners.forEach(nick => {
                 const statRef = db.collection('stats').doc(nick);
                 batch.set(statRef, {
@@ -322,35 +475,28 @@
                     wygrane: firebase.firestore.FieldValue.increment(1)
                 }, { merge: true });
             });
-            
-            // Przegrani
             losers.forEach(nick => {
                 const statRef = db.collection('stats').doc(nick);
                 batch.set(statRef, {
-                    mecze: firebase.firestore.FieldValue.increment(1),
-                    wygrane: firebase.firestore.FieldValue.increment(0) // tylko zwiększamy liczbę meczy
+                    mecze: firebase.firestore.FieldValue.increment(1)
                 }, { merge: true });
             });
-            
             return batch.commit();
         }
 
         function renderStats(stats) {
             const tbody = document.getElementById('stats');
             tbody.innerHTML = '';
-            // Oblicz winrate i sortuj
-            const sortedStats = Object.entries(stats).map(([nick, data]) => {
-                const winrate = data.mecze > 0 ? (data.wygrane / data.mecze * 100) : 0;
-                return { nick, ...data, winrate };
-            }).sort((a, b) => b.winrate - a.winrate);
+            const sortedStats = Object.entries(stats).map(([nick, data]) => ({
+                nick, ...data,
+                winrate: data.mecze > 0 ? (data.wygrane / data.mecze * 100) : 0
+            })).sort((a, b) => b.winrate - a.winrate);
 
             sortedStats.forEach(data => {
-                const row = `<tr><td>${data.nick}</td><td>${data.mecze}</td><td>${data.wygrane}</td><td>${data.winrate.toFixed(1)}%</td></tr>`;
+                const row = `<tr><td>${data.nick}</td><td>${data.mecze || 0}</td><td>${data.wygrane || 0}</td><td>${data.winrate.toFixed(1)}%</td></tr>`;
                 tbody.innerHTML += row;
             });
         }
-
-        // ===== HISTORIA I NARZĘDZIA =====
         
         function renderHistory(historia) {
             const cont = document.getElementById('history');
@@ -358,21 +504,35 @@
                 const date = s.timestamp?.toDate ? s.timestamp.toDate().toLocaleString('pl-PL') : (s.timestamp || 'Brak daty');
                 return `<div class="history-item">
                     ${date}<br>
-                    Alfa: ${s.alfa.join(', ')}<br>
-                    Beta: ${s.beta.join(', ')}
-                    ${s.winner ? `<br>🏆 Wynik: ${s.scoreA}-${s.scoreB} (${s.winner.toUpperCase()})` : ''}
+                    <strong>Alfa:</strong> ${s.alfa.join(', ')}<br>
+                    <strong>Beta:</strong> ${s.beta.join(', ')}
+                    ${s.winner ? `<br><strong>🏆 Wynik: ${s.scoreA}-${s.scoreB} (${s.winner.toUpperCase()})</strong>` : ''}
                 </div>`
             }).join('');
         }
 
         function copyToClipboard() {
             if (!currentSkład) return;
-            const text = `Alfa 🟢: ${currentSkład.alfa.join(', ')}\nBeta 🔴: ${currentSkład.beta.join(', ')}`;
-            navigator.clipboard.writeText(text).then(() => alert('Skopiowano! 📋'));
+            const text = `Alfa 🟢: ${currentSkład.alfa.join(', ')}
+Beta 🔴: ${currentSkład.beta.join(', ')}`;
+            navigator.clipboard.writeText(text).then(() => showSnackbar('Skopiowano do schowka! 📋'));
+        }
+        
+        function showSnackbar(message) {
+            const snackbar = new mdc.snackbar.MDCSnackbar(document.createElement('div'));
+            snackbar.labelText = message;
+            document.body.appendChild(snackbar.root_);
+            snackbar.open();
         }
 
-        // ===== START APLIKACJI =====
-        init();
+        document.addEventListener('DOMContentLoaded', () => {
+            init();
+        });
     </script>
+    <div class="mdc-snackbar">
+        <div class="mdc-snackbar__surface">
+            <div class="mdc-snackbar__label" role="status" aria-live="polite"></div>
+        </div>
+    </div>
 </body>
 </html>
