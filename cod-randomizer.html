@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CoD Team Randomizer</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #0a0a0a; color: #fff; margin: 0; padding: 20px; max-width: 600px; margin: auto; }
+        .section { margin: 20px 0; padding: 20px; border: 1px solid #333; border-radius: 10px; background: #1a1a1a; }
+        input { background: #333; color: #fff; border: 1px solid #555; padding: 10px; border-radius: 5px; width: 100%; margin: 5px 0; }
+        button { background: #ff4444; color: white; border: none; padding: 12px 20px; border-radius: 5px; cursor: pointer; font-size: 16px; margin: 5px; }
+        button:hover { background: #cc0000; }
+        button.secondary { background: #444; }
+        button.secondary:hover { background: #666; }
+        .team { display: flex; flex-wrap: wrap; justify-content: center; }
+        .player { background: #444; padding: 15px; margin: 10px; border-radius: 10px; text-align: center; min-width: 120px; box-shadow: 0 4px 8px rgba(0,0,0,0.5); }
+        .alfa .player { border: 3px solid #00ff00; }
+        .beta .player { border: 3px solid #ff0000; }
+        .stats-table { width: 100%; border-collapse: collapse; }
+        .stats-table th, .stats-table td { padding: 10px; border: 1px solid #555; text-align: center; }
+        .stats-table th { background: #333; }
+        #history { max-height: 300px; overflow-y: auto; }
+        .history-item { padding: 10px; margin: 5px 0; background: #222; border-radius: 5px; font-size: 14px; }
+        .vote-btn { font-size: 24px; margin: 10px; }
+        .hidden { display: none; }
+        #voting { text-align: center; margin: 20px 0; }
+        .score-input { width: 60px; text-align: center; }
+    </style>
+</head>
+<body>
+    <h1>🎮 CoD Team Randomizer</h1>
+
+    <!-- 1. Edycja listy graczy -->
+    <div class="section">
+        <h2>👥 Edytuj Graczy</h2>
+        <div id="players-list"></div>
+        <button onclick="savePlayers()">💾 Zapisz Graczy</button>
+    </div>
+
+    <!-- 2+3. Losowanie i wyniki -->
+    <div class="section">
+        <h2>🎲 Losuj Składy</h2>
+        <button onclick="losuj()">🎯 LOSUJ TERAZ!</button>
+        <button onclick="loadLast()" class="secondary">📜 Wczytaj Ostatnie</button>
+        <div id="wyniki" class="hidden">
+            <h3>Drużyna Alfa 🟢</h3>
+            <div id="alfa" class="team alfa"></div>
+            <h3>Drużyna Beta 🔴</h3>
+            <div id="beta" class="team beta"></div>
+            <div id="voting">
+                <button class="vote-btn" onclick="vote(true)">👍 Like (0)</button>
+                <button class="vote-btn" onclick="vote(false)">👎 Dislike (0)</button>
+                <span id="vote-count"></span>
+            </div>
+            <!-- Wyniki meczów -->
+            <div style="text-align: center; margin: 20px 0;">
+                <h4>🏆 Wynik Meczu</h4>
+                <label>Alfa: <input id="score-alfa" class="score-input" type="number" value="0"></label>
+                vs
+                <label>Beta: <input id="score-beta" class="score-input" type="number" value="0"></label>
+                <br><button onclick="saveScore()">💾 Zapisz Wynik</button>
+            </div>
+            <button onclick="copyToClipboard()">📋 Kopiuj do Schowka</button>
+        </div>
+    </div>
+
+    <!-- 4. Historia -->
+    <div class="section">
+        <h2>📚 Historia Losowań</h2>
+        <div id="history"></div>
+    </div>
+
+    <!-- Statystyki -->
+    <div class="section">
+        <h2>📊 Statystyki Graczy</h2>
+        <table class="stats-table">
+            <thead><tr><th>Gracz</th><th>Mecze</th><th>Wygrane</th><th>Winrate</th></tr></thead>
+            <tbody id="stats"></tbody>
+        </table>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+    <script>
+        // Wklej tutaj konfigurację swojego projektu Firebase
+        // Możesz ją znaleźć w konsoli Firebase > Ustawienia projektu
+        const firebaseConfig = {
+            apiKey: "AIzaSyDv3TlaoXP1Jte4rk7G_Oe5-ebaIBiMEJc",
+            authDomain: "kolo-a53dd.firebaseapp.com",
+            projectId: "kolo-a53dd",
+            storageBucket: "kolo-a53dd.firebasestorage.app",
+            messagingSenderId: "40469026968",
+            appId: "1:40469026968:web:6ee82883834e2f05e3d8ed",
+            measurementId: "G-7HDTPRQNMS"
+        };
+
+        // Inicjalizacja Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        let gracze = []; // Zostanie załadowane z Firebase
+        let currentSkład = null; // Aktualnie wylosowany skład
+        let currentSkładId = null; // ID dokumentu aktualnego składu w kolekcji 'draws'
+
+        // ===== INICJALIZACJA I SYNCHRONIZACJA DANYCH =====
+
+        function init() {
+            // Nasłuchuj zmian na liście graczy
+            db.collection('config').doc('players').onSnapshot(doc => {
+                if (doc.exists && doc.data().list) {
+                    gracze = doc.data().list;
+                    console.log("Zaktualizowano listę graczy:", gracze);
+                } else {
+                    // Jeśli nie ma listy graczy w bazie, stwórz domyślną
+                    gracze = Array.from({ length: 8 }, (_, i) => `Gracz ${i + 1}`);
+                    db.collection('config').doc('players').set({ list: gracze });
+                }
+                renderPlayersList();
+            });
+
+            // Nasłuchuj zmian w historii losowań (ostatnie 20)
+            db.collection('draws').orderBy('timestamp', 'desc').limit(20).onSnapshot(snapshot => {
+                const historia = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                console.log("Zaktualizowano historię:", historia);
+                renderHistory(historia);
+            });
+            
+            // Nasłuchuj na żywo aktualnego losowania
+            db.collection('current_draw').doc('live').onSnapshot(doc => {
+                if (doc.exists) {
+                    currentSkład = doc.data();
+                    currentSkładId = currentSkład.historyId;
+                    console.log("Otrzymano aktualne losowanie:", currentSkład);
+                    renderWyniki();
+                } else {
+                    document.getElementById('wyniki').classList.add('hidden');
+                }
+            });
+
+            // Nasłuchuj zmian w statystykach
+            db.collection('stats').onSnapshot(snapshot => {
+                const stats = {};
+                snapshot.forEach(doc => {
+                    stats[doc.id] = doc.data();
+                });
+                console.log("Zaktualizowano statystyki:", stats);
+                renderStats(stats);
+            });
+        }
+
+        // ===== ZARZĄDZANIE GRACZAMI =====
+
+        function renderPlayersList() {
+            const list = document.getElementById('players-list');
+            list.innerHTML = '';
+            // Upewnij się, że zawsze jest 8 pól do wpisu
+            const displayGracze = gracze.concat(Array(Math.max(0, 8 - gracze.length)).fill(''));
+            displayGracze.slice(0, 8).forEach((nick, i) => {
+                const div = document.createElement('div');
+                div.innerHTML = `<input id="player${i}" value="${nick}" placeholder="Nick ${i + 1}">`;
+                list.appendChild(div);
+            });
+        }
+
+        function savePlayers() {
+            const newGracze = [];
+            for (let i = 0; i < 8; i++) {
+                const nick = document.getElementById(`player${i}`).value.trim();
+                if(nick) newGracze.push(nick);
+            }
+            if (newGracze.length !== 8) {
+                alert("Potrzeba dokładnie 8 graczy!");
+                return;
+            }
+            db.collection('config').doc('players').set({ list: newGracze })
+                .then(() => alert('Gracze zapisani w chmurze! ☁️'))
+                .catch(err => console.error("Błąd zapisu graczy: ", err));
+        }
+
+        // ===== LOSOWANIE SKŁADÓW =====
+
+        async function losuj() {
+            if (gracze.length !== 8) {
+                alert("Najpierw zdefiniuj 8 graczy!");
+                return;
+            }
+            const shuffled = [...gracze].sort(() => Math.random() - 0.5);
+            const newSkład = {
+                alfa: shuffled.slice(0, 4),
+                beta: shuffled.slice(4, 8),
+                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                likes: 0,
+                dislikes: 0,
+                votes: {} // { 'playerName': 'like'/'dislike' }
+            };
+
+            try {
+                // 1. Dodaj do historii i pobierz ID
+                const historyDocRef = await db.collection('draws').add(newSkład);
+                console.log("Dodano do historii, ID:", historyDocRef.id);
+
+                // 2. Ustaw jako aktualne losowanie, dodając ID z historii
+                await db.collection('current_draw').doc('live').set({
+                    ...newSkład,
+                    historyId: historyDocRef.id,
+                    timestamp: new Date().toISOString() // Użyj stringa dla 'live' bo onSnapshot nie lubi serverTimestamp
+                });
+                console.log("Ustawiono jako aktualne losowanie.");
+            } catch (err) {
+                console.error("Błąd podczas losowania: ", err);
+                alert("Wystąpił błąd, sprawdź konsolę.");
+            }
+        }
+
+        function renderWyniki() {
+            if (!currentSkład) return;
+            document.getElementById('wyniki').classList.remove('hidden');
+            ['alfa', 'beta'].forEach(team => {
+                const cont = document.getElementById(team);
+                cont.innerHTML = '';
+                currentSkład[team].forEach(nick => {
+                    const player = document.createElement('div');
+                    player.className = 'player';
+                    player.innerHTML = `<div style="font-size:20px;">${nick}</div>`;
+                    cont.appendChild(player);
+                });
+            });
+            updateVoteDisplay();
+            // Pokaż/ukryj panel do głosowania
+            document.getElementById('voting').classList.toggle('hidden', currentSkład.winner);
+            // Resetuj i pokaż pola do wyniku
+            document.getElementById('score-alfa').value = currentSkład.scoreA || 0;
+            document.getElementById('score-beta').value = currentSkład.scoreB || 0;
+        }
+        
+        async function loadLast() {
+            const lastDrawSnapshot = await db.collection('draws').orderBy('timestamp', 'desc').limit(1).get();
+            if (!lastDrawSnapshot.empty) {
+                const lastDrawDoc = lastDrawSnapshot.docs[0];
+                const lastDrawData = lastDrawDoc.data();
+                await db.collection('current_draw').doc('live').set({
+                    ...lastDrawData,
+                    historyId: lastDrawDoc.id,
+                    timestamp: lastDrawData.timestamp.toDate().toISOString()
+                });
+                console.log("Wczytano ostatnie losowanie.");
+            } else {
+                alert("Brak historii losowań.");
+            }
+        }
+
+        // ===== GŁOSOWANIE I WYNIKI =====
+
+        function vote(isLike) {
+            // Prosta implementacja - w prawdziwej aplikacji potrzebny byłby system uwierzytelniania,
+            // aby wiedzieć, który gracz głosuje. Tutaj upraszczamy, że każdy klik to jeden głos.
+            if (!currentSkładId) return;
+
+            const updateField = isLike ? 'likes' : 'dislikes';
+            db.collection('draws').doc(currentSkładId).update({
+                [updateField]: firebase.firestore.FieldValue.increment(1)
+            });
+            db.collection('current_draw').doc('live').update({
+                [updateField]: firebase.firestore.FieldValue.increment(1)
+            });
+        }
+        
+        function updateVoteDisplay() {
+            const likes = currentSkład.likes || 0;
+            const dislikes = currentSkład.dislikes || 0;
+            document.querySelector('#voting button:first-child').textContent = `👍 Like (${likes})`;
+            document.querySelector('#voting button:last-child').textContent = `👎 Dislike (${dislikes})`;
+            document.getElementById('vote-count').textContent = `Głosy: ${likes + dislikes}/8`;
+        }
+
+        async function saveScore() {
+            if (!currentSkładId) {
+                alert("Brak aktywnego losowania do zapisania wyniku.");
+                return;
+            }
+            const scoreA = parseInt(document.getElementById('score-alfa').value) || 0;
+            const scoreB = parseInt(document.getElementById('score-beta').value) || 0;
+
+            if (scoreA === scoreB) {
+                alert("Wynik nie może być remisowy!");
+                return;
+            }
+            const winnerTeamName = scoreA > scoreB ? 'alfa' : 'beta';
+            const winnerTeamPlayers = currentSkład[winnerTeamName];
+            const loserTeamName = winnerTeamName === 'alfa' ? 'beta' : 'alfa';
+            const loserTeamPlayers = currentSkład[loserTeamName];
+            
+            const updates = {
+                winner: winnerTeamName,
+                scoreA: scoreA,
+                scoreB: scoreB
+            };
+
+            try {
+                // Zaktualizuj dokument w historii i w aktualnym losowaniu
+                await db.collection('draws').doc(currentSkładId).update(updates);
+                await db.collection('current_draw').doc('live').update(updates);
+                
+                // Zaktualizuj statystyki graczy w transakcji
+                await updateStats(winnerTeamPlayers, loserTeamPlayers);
+
+                alert(`🏆 Zapisano: ${scoreA}-${scoreB} (Wygrywa: ${winnerTeamName.toUpperCase()})`);
+            } catch (err) {
+                console.error("Błąd przy zapisie wyniku: ", err);
+                alert("Wystąpił błąd, sprawdź konsolę.");
+            }
+        }
+
+        function updateStats(winners, losers) {
+            const batch = db.batch();
+            
+            // Zwycięzcy
+            winners.forEach(nick => {
+                const statRef = db.collection('stats').doc(nick);
+                batch.set(statRef, {
+                    mecze: firebase.firestore.FieldValue.increment(1),
+                    wygrane: firebase.firestore.FieldValue.increment(1)
+                }, { merge: true });
+            });
+            
+            // Przegrani
+            losers.forEach(nick => {
+                const statRef = db.collection('stats').doc(nick);
+                batch.set(statRef, {
+                    mecze: firebase.firestore.FieldValue.increment(1),
+                    wygrane: firebase.firestore.FieldValue.increment(0) // tylko zwiększamy liczbę meczy
+                }, { merge: true });
+            });
+            
+            return batch.commit();
+        }
+
+        function renderStats(stats) {
+            const tbody = document.getElementById('stats');
+            tbody.innerHTML = '';
+            // Oblicz winrate i sortuj
+            const sortedStats = Object.entries(stats).map(([nick, data]) => {
+                const winrate = data.mecze > 0 ? (data.wygrane / data.mecze * 100) : 0;
+                return { nick, ...data, winrate };
+            }).sort((a, b) => b.winrate - a.winrate);
+
+            sortedStats.forEach(data => {
+                const row = `<tr><td>${data.nick}</td><td>${data.mecze}</td><td>${data.wygrane}</td><td>${data.winrate.toFixed(1)}%</td></tr>`;
+                tbody.innerHTML += row;
+            });
+        }
+
+        // ===== HISTORIA I NARZĘDZIA =====
+        
+        function renderHistory(historia) {
+            const cont = document.getElementById('history');
+            cont.innerHTML = historia.map(s => {
+                const date = s.timestamp?.toDate ? s.timestamp.toDate().toLocaleString('pl-PL') : (s.timestamp || 'Brak daty');
+                return `<div class="history-item">
+                    ${date}<br>
+                    Alfa: ${s.alfa.join(', ')}<br>
+                    Beta: ${s.beta.join(', ')}
+                    ${s.winner ? `<br>🏆 Wynik: ${s.scoreA}-${s.scoreB} (${s.winner.toUpperCase()})` : ''}
+                </div>`
+            }).join('');
+        }
+
+        function copyToClipboard() {
+            if (!currentSkład) return;
+            const text = `Alfa 🟢: ${currentSkład.alfa.join(', ')}\nBeta 🔴: ${currentSkład.beta.join(', ')}`;
+            navigator.clipboard.writeText(text).then(() => alert('Skopiowano! 📋'));
+        }
+
+        // ===== START APLIKACJI =====
+        init();
+    </script>
+</body>
+</html>
