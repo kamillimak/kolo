@@ -25,6 +25,12 @@
             border: 2px solid #f87171; /* Red 400 */
             box-shadow: 0 0 15px #f87171;
         }
+        .streak-win {
+            color: #34d399;
+        }
+        .streak-loss {
+            color: #f87171;
+        }
     </style>
 </head>
 <body class="h-full text-gray-100 flex items-center justify-center p-4">
@@ -123,6 +129,7 @@ Gracz 3
                                     <th class="p-2 text-center">Mecze</th>
                                     <th class="p-2 text-center">Wygrane</th>
                                     <th class="p-2 text-center">Winrate</th>
+                                    <th class="p-2 text-center">Seria</th>
                                 </tr>
                             </thead>
                             <tbody id="stats"></tbody>
@@ -172,6 +179,21 @@ Gracz 3
             let gracze = []; 
             let currentSkład = null; 
             let currentSkładId = null;
+            let animationInterval = null;
+
+            // --- Feature 4: Sound Effects ---
+            const sounds = {
+                spin: new Audio('https://cdn.pixabay.com/audio/2022/03/15/audio_2b18a144b6.mp3'),
+                save: new Audio('https://cdn.pixabay.com/audio/2021/08/04/audio_dea4028a7b.mp3'),
+                swap: new Audio('https://cdn.pixabay.com/audio/2022/03/10/audio_c3b4198889.mp3')
+            };
+            Object.values(sounds).forEach(sound => sound.volume = 0.5);
+            const playSound = (soundName) => {
+                if (sounds[soundName]) {
+                    sounds[soundName].currentTime = 0;
+                    sounds[soundName].play();
+                }
+            };
 
             // --- Event Listeners ---
             savePlayersBtn.addEventListener('click', savePlayers);
@@ -182,37 +204,35 @@ Gracz 3
 
             // --- Core Functions ---
             function init() {
-                // Player listener
                 db.collection('config').doc('players').onSnapshot(doc => {
                     if (doc.exists && doc.data().list) {
                         gracze = doc.data().list;
                         renderPlayersList();
                     } else {
-                        // Create default if doesn't exist
                         const defaultGracze = Array.from({ length: 8 }, (_, i) => `Gracz ${i + 1}`);
                         db.collection('config').doc('players').set({ list: defaultGracze });
                     }
                 });
 
-                // History listener
                 db.collection('draws').orderBy('timestamp', 'desc').limit(20).onSnapshot(snapshot => {
                     const historia = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                     renderHistory(historia);
                 });
                 
-                // Current draw listener
                 db.collection('current_draw').doc('live').onSnapshot(doc => {
+                    clearInterval(animationInterval); // Stop animation if it's running
                     if (doc.exists) {
                         currentSkład = doc.data();
                         currentSkładId = currentSkład.historyId;
                         renderWyniki();
+                        // --- Feature 3: Shareable Link ---
+                        window.location.hash = currentSkład.historyId;
                     } else {
                         wynikiDiv.classList.add('hidden');
                         wynikiPlaceholder.classList.remove('hidden');
                     }
                 });
 
-                // Stats listener
                 db.collection('stats').onSnapshot(snapshot => {
                     const stats = {};
                     snapshot.forEach(doc => {
@@ -220,9 +240,23 @@ Gracz 3
                     });
                     renderStats(stats);
                 });
+                
+                // --- Feature 3: Load from Shareable Link ---
+                if (window.location.hash) {
+                    const hashId = window.location.hash.substring(1);
+                    db.collection('draws').doc(hashId).get().then(doc => {
+                        if (doc.exists) {
+                            const sharedSkład = doc.data();
+                            db.collection('current_draw').doc('live').set({
+                                ...sharedSkład,
+                                historyId: doc.id,
+                                timestamp: sharedSkład.timestamp.toDate().toISOString()
+                            });
+                        }
+                    });
+                }
             }
 
-            // --- Player Management ---
             function renderPlayersList() {
                 if (gracze.length > 0) {
                     playersTextarea.value = gracze.join('\n');
@@ -231,20 +265,15 @@ Gracz 3
 
             function savePlayers() {
                 const namesText = playersTextarea.value;
-                const parsedNames = namesText.split('\n')
-                                            .map(name => name.trim())
-                                            .filter(name => name.length > 0);
-                
+                const parsedNames = namesText.split('\n').map(n => n.trim()).filter(n => n.length > 0);
                 const uniqueNames = [...new Set(parsedNames)];
-
                 if (uniqueNames.length < 2) {
                     playerError.textContent = 'Wprowadź co najmniej 2 graczy.';
                     return;
                 }
-                
                 playerError.textContent = '';
                 db.collection('config').doc('players').set({ list: uniqueNames })
-                    .then(() => console.log('Gracze zapisani!'))
+                    .then(() => playSound('save'))
                     .catch(err => playerError.textContent = 'Błąd zapisu.');
             }
 
@@ -258,7 +287,27 @@ Gracz 3
                     alert("Potrzeba co najmniej 2 graczy do losowania!");
                     return;
                 }
+                
+                playSound('spin');
 
+                // --- Feature 1: Slot Machine Animation ---
+                let animationCounter = 0;
+                animationInterval = setInterval(() => {
+                    const shuffled = [...gracze].sort(() => Math.random() - 0.5);
+                    const half = shuffled.length / 2;
+                    alfaDiv.innerHTML = shuffled.slice(0, half).map(nick => `<p class="opacity-50">${nick}</p>`).join('');
+                    betaDiv.innerHTML = shuffled.slice(half).map(nick => `<p class="opacity-50">${nick}</p>`).join('');
+                    wynikiDiv.classList.remove('hidden');
+                    wynikiPlaceholder.classList.add('hidden');
+                    animationCounter++;
+                    if (animationCounter > 20) { // Approx 2 seconds
+                        clearInterval(animationInterval);
+                        finalizeLosowanie();
+                    }
+                }, 100);
+            }
+
+            function finalizeLosowanie() {
                 const shuffled = [...gracze].sort(() => Math.random() - 0.5);
                 const half = shuffled.length / 2;
                 const newSkład = {
@@ -267,20 +316,19 @@ Gracz 3
                     timestamp: firebase.firestore.FieldValue.serverTimestamp(),
                 };
 
-                db.collection('draws').add(newSkład)
-                    .then(historyDocRef => {
-                        db.collection('current_draw').doc('live').set({
-                            ...newSkład,
-                            historyId: historyDocRef.id,
-                            timestamp: new Date().toISOString()
-                        });
-                    })
-                    .catch(err => console.error("Błąd podczas losowania: ", err));
+                db.collection('draws').add(newSkład).then(historyDocRef => {
+                    db.collection('current_draw').doc('live').set({
+                        ...newSkład,
+                        historyId: historyDocRef.id,
+                        timestamp: new Date().toISOString()
+                    });
+                }).catch(err => console.error("Błąd podczas losowania: ", err));
             }
 
             async function loadLast() {
                 const lastDrawSnapshot = await db.collection('draws').orderBy('timestamp', 'desc').limit(1).get();
                 if (!lastDrawSnapshot.empty) {
+                    playSound('swap');
                     const lastDrawDoc = lastDrawSnapshot.docs[0];
                     const lastDrawData = lastDrawDoc.data();
                     db.collection('current_draw').doc('live').set({
@@ -293,29 +341,63 @@ Gracz 3
                 }
             }
 
-            // --- Rendering ---
             function renderWyniki() {
                 if (!currentSkład) return;
                 
                 wynikiDiv.classList.remove('hidden');
                 wynikiPlaceholder.classList.add('hidden');
 
-                alfaDiv.innerHTML = currentSkład.alfa.map(nick => `<p>${nick}</p>`).join('');
-                betaDiv.innerHTML = currentSkład.beta.map(nick => `<p>${nick}</p>`).join('');
+                const renderTeam = (teamName) => {
+                    const teamDiv = teamName === 'alfa' ? alfaDiv : betaDiv;
+                    teamDiv.innerHTML = currentSkład[teamName].map(nick => `
+                        <div class="flex items-center justify-center gap-2">
+                            <span>${nick}</span>
+                            <button data-player="${nick}" data-team="${teamName}" class="swap-btn text-xs bg-gray-700 hover:bg-gray-600 p-1 rounded-full">↔️</button>
+                        </div>
+                    `).join('');
+                };
 
-                // Highlight winning team
+                renderTeam('alfa');
+                renderTeam('beta');
+                
+                document.querySelectorAll('.swap-btn').forEach(btn => btn.addEventListener('click', handleSwap));
+
                 alfaCard.classList.remove('team-alfa');
                 betaCard.classList.remove('team-beta');
                 if (currentSkład.winner) {
-                    if (currentSkład.winner === 'alfa') {
-                        alfaCard.classList.add('team-alfa');
-                    } else {
-                        betaCard.classList.add('team-beta');
-                    }
+                    if (currentSkład.winner === 'alfa') alfaCard.classList.add('team-alfa');
+                    else betaCard.classList.add('team-beta');
                 }
                 
                 scoreAlfaInput.value = currentSkład.scoreA || 0;
                 scoreBetaInput.value = currentSkład.scoreB || 0;
+            }
+            
+            // --- Feature 2: Manual Player Swapping ---
+            function handleSwap(event) {
+                const playerToSwap = event.target.dataset.player;
+                const sourceTeam = event.target.dataset.team;
+                const targetTeam = sourceTeam === 'alfa' ? 'beta' : 'alfa';
+
+                if (!currentSkład || currentSkład.winner) {
+                    alert("Nie można zamieniać graczy po zapisaniu wyniku.");
+                    return;
+                }
+                
+                const playerToMoveFromTargetTeam = currentSkład[targetTeam][Math.floor(Math.random() * currentSkład[targetTeam].length)];
+
+                const newSourceTeam = currentSkład[sourceTeam].filter(p => p !== playerToSwap).concat(playerToMoveFromTargetTeam);
+                const newTargetTeam = currentSkład[targetTeam].filter(p => p !== playerToMoveFromTargetTeam).concat(playerToSwap);
+
+                const updatedSkład = {
+                    ...currentSkład,
+                    [sourceTeam]: newSourceTeam,
+                    [targetTeam]: newTargetTeam,
+                };
+                
+                playSound('swap');
+                db.collection('current_draw').doc('live').update(updatedSkład);
+                db.collection('draws').doc(currentSkładId).update(updatedSkład);
             }
 
             function renderHistory(historia) {
@@ -342,33 +424,38 @@ Gracz 3
                 })).sort((a, b) => b.winrate - a.winrate);
 
                 if (sortedStats.length === 0) {
-                    statsTbody.innerHTML = '<tr><td colspan="4" class="text-center text-gray-500 py-4">Brak statystyk.</td></tr>';
+                    statsTbody.innerHTML = '<tr><td colspan="5" class="text-center text-gray-500 py-4">Brak statystyk.</td></tr>';
                     return;
                 }
 
-                statsTbody.innerHTML = sortedStats.map(data => `
-                    <tr class="border-b border-gray-700">
+                statsTbody.innerHTML = sortedStats.map(data => {
+                    const streak = data.streak || 0;
+                    let streakEl = '';
+                    if (streak > 0) streakEl = `<span class="streak-win">W${streak}</span>`;
+                    if (streak < 0) streakEl = `<span class="streak-loss">L${Math.abs(streak)}</span>`;
+
+                    return `<tr class="border-b border-gray-700">
                         <td class="p-2 font-semibold">${data.nick}</td>
                         <td class="p-2 text-center">${data.mecze || 0}</td>
                         <td class="p-2 text-center">${data.wygrane || 0}</td>
                         <td class="p-2 text-center font-semibold ${data.winrate > 50 ? 'text-green-400' : 'text-red-400'}">${data.winrate.toFixed(1)}%</td>
-                    </tr>
-                `).join('');
+                        <td class="p-2 text-center font-bold">${streakEl}</td>
+                    </tr>`
+                }).join('');
             }
 
-            // --- Scoring and Utils ---
             async function saveScore() {
-                if (!currentSkładId) return;
+                if (!currentSkładId || currentSkład.winner) return;
 
                 const scoreA = parseInt(scoreAlfaInput.value) || 0;
                 const scoreB = parseInt(scoreBetaInput.value) || 0;
-
                 if (scoreA === scoreB) {
                     alert("Wynik nie może być remisowy!");
                     return;
                 }
+
+                playSound('save');
                 const winnerTeamName = scoreA > scoreB ? 'alfa' : 'beta';
-                
                 const updates = { winner: winnerTeamName, scoreA, scoreB };
 
                 try {
@@ -379,23 +466,32 @@ Gracz 3
                     console.error("Błąd przy zapisie wyniku: ", err);
                 }
             }
-
-            function updateStats(winners, losers) {
+            
+            // --- Feature 5: Win/Loss Streak ---
+            async function updateStats(winners, losers) {
                 const batch = db.batch();
-                winners.forEach(nick => {
-                    const statRef = db.collection('stats').doc(nick);
-                    batch.set(statRef, {
+                const statsRef = db.collection('stats');
+
+                for (const nick of winners) {
+                    const doc = await statsRef.doc(nick).get();
+                    const currentStreak = doc.exists ? (doc.data().streak || 0) : 0;
+                    const newStreak = currentStreak > 0 ? currentStreak + 1 : 1;
+                    batch.set(statsRef.doc(nick), {
                         mecze: firebase.firestore.FieldValue.increment(1),
-                        wygrane: firebase.firestore.FieldValue.increment(1)
+                        wygrane: firebase.firestore.FieldValue.increment(1),
+                        streak: newStreak
                     }, { merge: true });
-                });
-                losers.forEach(nick => {
-                    const statRef = db.collection('stats').doc(nick);
-                    batch.set(statRef, {
-                        mecze: firebase.firestore.FieldValue.increment(1)
-                        // Note: we don't increment 'wygrane' for losers
+                }
+
+                for (const nick of losers) {
+                    const doc = await statsRef.doc(nick).get();
+                    const currentStreak = doc.exists ? (doc.data().streak || 0) : 0;
+                    const newStreak = currentStreak < 0 ? currentStreak - 1 : -1;
+                    batch.set(statsRef.doc(nick), {
+                        mecze: firebase.firestore.FieldValue.increment(1),
+                        streak: newStreak
                     }, { merge: true });
-                });
+                }
                 return batch.commit();
             }
 
@@ -406,7 +502,6 @@ Beta 🔴: ${currentSkład.beta.join(', ')}`;
                 navigator.clipboard.writeText(text).then(() => alert('Skopiowano do schowka!'));
             }
 
-            // --- Initial Load ---
             init();
         });
     </script>
