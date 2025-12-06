@@ -1,541 +1,414 @@
 <!DOCTYPE html>
-<html lang="pl">
+<html lang="pl" class="h-full bg-gray-900">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CoD Team Randomizer</title>
-    <!-- Fonts and Icons -->
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
-    <!-- Material Components for the Web -->
-    <link rel="stylesheet" href="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.css">
-    <script src="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.js"></script>
-
-    <style>
-        :root {
-            --mdc-theme-primary: #0d47a1; /* Deep Blue */
-            --mdc-theme-secondary: #00e5ff; /* Cyan Accent */
-            --mdc-theme-background: #121212;
-            --mdc-theme-surface: #1e1e1e;
-            --mdc-theme-on-primary: #ffffff;
-            --mdc-theme-on-secondary: #000000;
-            --mdc-theme-on-surface: #ffffff;
-            --team-alfa-color: #00ff7f; /* Spring Green */
-            --team-beta-color: #ff4444; /* Red */
-        }
-        body {
-            font-family: 'Roboto', sans-serif;
-            color: var(--mdc-theme-on-surface);
-            margin: 0;
-            padding: 16px;
-            background-color: #121212; /* Fallback */
-            background-image: 
-                radial-gradient(at 0% 0%, hsla(253, 100%, 7%, 1) 0px, transparent 50%),
-                radial-gradient(at 98% 1%, hsla(240, 100%, 8%, 1) 0px, transparent 50%);
-        }
-        .container {
-            max-width: 800px;
-            margin: auto;
-        }
-        .mdc-card {
-            margin-bottom: 24px;
-            background-color: var(--mdc-theme-surface);
-            border-radius: 8px;
-            box-shadow: 0 8px 16px rgba(0,0,0,0.3);
-            transition: all 0.3s ease-in-out;
-        }
-        .mdc-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 12px 24px rgba(0,0,0,0.5);
-        }
-        .card-header {
-            padding: 16px;
-            display: flex;
-            align-items: center;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-        }
-        .card-header .material-icons {
-            margin-right: 16px;
-            color: var(--mdc-theme-secondary);
-        }
-        .card-content {
-            padding: 16px;
-        }
-        h1 {
-            font-weight: 300;
-            text-align: center;
-            color: var(--mdc-theme-secondary);
-            margin-bottom: 32px;
-        }
-        h1 .material-icons {
-            font-size: 2.5rem;
-            vertical-align: middle;
-        }
-        .mdc-text-field {
-            width: 100%;
-            margin-bottom: 8px !important;
-        }
-        .team {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: space-around;
-            margin-top: 16px;
-        }
-        .player {
-            padding: 12px;
-            margin: 8px;
-            border-radius: 8px;
-            text-align: center;
-            min-width: 140px;
-            border: 2px solid transparent;
-            background: rgba(255,255,255,0.05);
-            transition: transform 0.2s;
-        }
-        .player:hover {
-            transform: scale(1.05);
-        }
-        .alfa .player {
-            border-color: var(--team-alfa-color);
-            box-shadow: 0 0 12px var(--team-alfa-color);
-        }
-        .beta .player {
-            border-color: var(--team-beta-color);
-            box-shadow: 0 0 12px var(--team-beta-color);
-        }
-        #history {
-            max-height: 300px;
-            overflow-y: auto;
-            padding-right: 8px;
-        }
-        .history-item {
-            padding: 12px;
-            margin: 8px 0;
-            background: rgba(0,0,0,0.2);
-            border-left: 4px solid var(--mdc-theme-secondary);
-            border-radius: 4px;
-            font-size: 14px;
-        }
-        .stats-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        .stats-table th, .stats-table td {
-            padding: 12px;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-            text-align: center;
-        }
-        .stats-table th {
-            color: var(--mdc-theme-secondary);
-        }
-        .hidden { display: none; }
-        .button-group {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-            margin-top: 16px;
-        }
-        .vote-btn .mdc-button__label {
-            font-size: 1.2rem;
-        }
-        #wyniki h3 {
-          margin-top: 24px;
-        }
-        .alfa h3 { color: var(--team-alfa-color); }
-        .beta h3 { color: var(--team-beta-color); }
-    </style>
-</head>
-<body class="mdc-typography">
-    <div class="container">
-        <h1><i class="material-icons">videogame_asset</i> CoD Team Randomizer</h1>
-
-        <!-- 1. Edycja listy graczy -->
-        <div class="mdc-card">
-            <div class="card-header">
-                <i class="material-icons">groups</i>
-                <h2 class="mdc-typography--headline6">Edytuj Graczy</h2>
-            </div>
-            <div class="card-content">
-                <div id="players-list"></div>
-                <div class="button-group">
-                    <button class="mdc-button mdc-button--raised" onclick="savePlayers()">
-                        <span class="mdc-button__ripple"></span>
-                        <i class="material-icons mdc-button__icon" aria-hidden="true">save</i>
-                        <span class="mdc-button__label">Zapisz Graczy</span>
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- 2+3. Losowanie i wyniki -->
-        <div class="mdc-card">
-            <div class="card-header">
-                <i class="material-icons">casino</i>
-                <h2 class="mdc-typography--headline6">Losuj Składy</h2>
-            </div>
-            <div class="card-content">
-                <div class="button-group">
-                    <button class="mdc-button mdc-button--raised" onclick="losuj()">
-                        <span class="mdc-button__ripple"></span>
-                        <i class="material-icons mdc-button__icon" aria-hidden="true">casino</i>
-                        <span class="mdc-button__label">LOSUJ TERAZ!</span>
-                    </button>
-                    <button class="mdc-button" onclick="loadLast()">
-                        <span class="mdc-button__ripple"></span>
-                        <i class="material-icons mdc-button__icon" aria-hidden="true">history</i>
-                        <span class="mdc-button__label">Wczytaj Ostatnie</span>
-                    </button>
-                </div>
-
-                <div id="wyniki" class="hidden">
-                    <div class="mdc-layout-grid">
-                        <div class="mdc-layout-grid__inner">
-                            <div class="mdc-layout-grid__cell--span-6 alfa">
-                                <h3>Drużyna Alfa</h3>
-                                <div id="alfa" class="team"></div>
-                            </div>
-                            <div class="mdc-layout-grid__cell--span-6 beta">
-                                <h3>Drużyna Beta</h3>
-                                <div id="beta" class="team"></div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div id="voting" style="text-align: center; margin: 20px 0;">
-                        <div class="button-group" style="justify-content: center;">
-                             <button class="mdc-button mdc-button--raised vote-btn" onclick="vote(true)">
-                                <span class="mdc-button__ripple"></span>
-                                <span class="mdc-button__label">👍</span>
-                            </button>
-                             <button class="mdc-button mdc-button--raised vote-btn" onclick="vote(false)" style="--mdc-theme-primary: var(--team-beta-color); --mdc-theme-on-primary: #fff;">
-                                <span class="mdc-button__ripple"></span>
-                                <span class="mdc-button__label">👎</span>
-                            </button>
-                        </div>
-                         <p id="vote-count" class="mdc-typography--body1"></p>
-                    </div>
-
-                    <div style="text-align: center; margin: 20px 0;">
-                        <h4 class="mdc-typography--subtitle1">🏆 Wynik Meczu</h4>
-                        <div class="button-group" style="justify-content: center; align-items: center;">
-                             <div class="mdc-text-field mdc-text-field--outlined score-input" style="width: 80px;">
-                                <input type="number" id="score-alfa" class="mdc-text-field__input" value="0">
-                                <div class="mdc-notched-outline"><div class="mdc-notched-outline__leading"></div><div class="mdc-notched-outline__notch"><label class="mdc-floating-label">Alfa</label></div><div class="mdc-notched-outline__trailing"></div></div>
-                            </div>
-                            <span>vs</span>
-                            <div class="mdc-text-field mdc-text-field--outlined score-input" style="width: 80px;">
-                                <input type="number" id="score-beta" class="mdc-text-field__input" value="0">
-                                <div class="mdc-notched-outline"><div class="mdc-notched-outline__leading"></div><div class="mdc-notched-outline__notch"><label class="mdc-floating-label">Beta</label></div><div class="mdc-notched-outline__trailing"></div></div>
-                            </div>
-                        </div>
-                        <button class="mdc-button mdc-button--raised" onclick="saveScore()">
-                            <span class="mdc-button__ripple"></span>
-                            <i class="material-icons mdc-button__icon">save</i>
-                            <span class="mdc-button__label">Zapisz Wynik</span>
-                        </button>
-                    </div>
-
-                    <div class="button-group" style="justify-content: center;">
-                        <button class="mdc-button" onclick="copyToClipboard()">
-                            <span class="mdc-button__ripple"></span>
-                            <i class="material-icons mdc-button__icon">content_copy</i>
-                            <span class="mdc-button__label">Kopiuj do Schowka</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 4. Historia -->
-        <div class="mdc-card">
-            <div class="card-header">
-                <i class="material-icons">history</i>
-                <h2 class="mdc-typography--headline6">Historia Losowań</h2>
-            </div>
-            <div class="card-content">
-                <div id="history"></div>
-            </div>
-        </div>
-
-        <!-- Statystyki -->
-        <div class="mdc-card">
-            <div class="card-header">
-                <i class="material-icons">leaderboard</i>
-                <h2 class="mdc-typography--headline6">Statystyki Graczy</h2>
-            </div>
-            <div class="card-content">
-                <table class="stats-table">
-                    <thead><tr><th>Gracz</th><th>Mecze</th><th>Wygrane</th><th>Winrate</th></tr></thead>
-                    <tbody id="stats"></tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .team-card {
+            transition: all 0.3s ease-in-out;
+        }
+        .team-alfa {
+            border: 2px solid #34d399; /* Emerald 400 */
+            box-shadow: 0 0 15px #34d399;
+        }
+        .team-beta {
+            border: 2px solid #f87171; /* Red 400 */
+            box-shadow: 0 0 15px #f87171;
+        }
+    </style>
+</head>
+<body class="h-full text-gray-100 flex items-center justify-center p-4">
+
+    <div class="w-full max-w-6xl mx-auto">
+        
+        <header class="text-center mb-8">
+            <h1 class="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-cyan-400 to-green-400">
+                CoD Team Randomizer
+            </h1>
+        </header>
+
+        <main class="w-full grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+            <!-- Left Column: Setup and Actions -->
+            <div class="lg:col-span-1 space-y-8">
+                <!-- Player Edit Card -->
+                <div class="bg-gray-800 p-6 rounded-lg shadow-xl">
+                    <h2 class="text-2xl font-bold mb-4 text-cyan-400">👥 Gracze</h2>
+                    <p class="text-gray-400 mb-4">Wpisz po jednym graczu w każdej linii. Aplikacja automatycznie podzieli ich na dwie równe drużyny.</p>
+                    <textarea id="players-textarea" class="w-full h-48 bg-gray-900 text-white p-3 rounded-md border border-gray-700 focus:outline-none focus:ring-2 focus:ring-cyan-500" placeholder="Gracz 1
+Gracz 2
+Gracz 3
+..."></textarea>
+                    <button id="save-players-btn" class="mt-4 w-full bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:from-cyan-600 hover:to-blue-700 transition duration-300 text-xl">
+                        💾 Zapisz Graczy
+                    </button>
+                    <p id="player-error" class="text-red-400 mt-2 h-6 text-center"></p>
+                </div>
+                
+                <!-- Actions Card -->
+                <div class="bg-gray-800 p-6 rounded-lg shadow-xl">
+                    <h2 class="text-2xl font-bold mb-4 text-cyan-400">🎲 Akcje</h2>
+                    <div class="space-y-4">
+                        <button id="losuj-btn" class="w-full bg-gradient-to-r from-green-500 to-teal-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:from-green-600 hover:to-teal-700 transition duration-300 text-xl">
+                            🎯 LOSUJ SKŁADY
+                        </button>
+                        <button id="load-last-btn" class="w-full bg-gray-700 text-white font-bold py-3 px-6 rounded-lg hover:bg-gray-600 transition duration-300">
+                            📜 Wczytaj Ostatnie
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Middle Column: Teams -->
+            <div class="lg:col-span-2">
+                <div id="wyniki" class="hidden bg-gray-800 p-6 rounded-lg shadow-xl">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Team Alfa -->
+                        <div id="alfa-card" class="team-card bg-gray-900 p-4 rounded-lg">
+                            <h3 class="text-2xl font-bold text-center text-green-400">Drużyna Alfa 🟢</h3>
+                            <div id="alfa" class="mt-4 space-y-2 text-center text-lg"></div>
+                        </div>
+                        <!-- Team Beta -->
+                        <div id="beta-card" class="team-card bg-gray-900 p-4 rounded-lg">
+                            <h3 class="text-2xl font-bold text-center text-red-400">Drużyna Beta 🔴</h3>
+                            <div id="beta" class="mt-4 space-y-2 text-center text-lg"></div>
+                        </div>
+                    </div>
+                     <!-- Score and Other Actions -->
+                    <div class="mt-6 text-center">
+                        <h4 class="text-xl font-bold mb-2">🏆 Wynik Meczu</h4>
+                        <div class="flex justify-center items-center gap-4">
+                            <label class="flex items-center gap-2">Alfa: <input id="score-alfa" type="number" value="0" class="score-input bg-gray-700 w-20 text-center p-2 rounded"></label>
+                            <span>vs</span>
+                             <label class="flex items-center gap-2">Beta: <input id="score-beta" type="number" value="0" class="score-input bg-gray-700 w-20 text-center p-2 rounded"></label>
+                        </div>
+                        <button id="save-score-btn" class="mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg">
+                            💾 Zapisz Wynik
+                        </button>
+                    </div>
+                     <div class="mt-6 text-center">
+                        <button id="copy-btn" class="text-gray-400 hover:text-white">📋 Kopiuj do Schowka</button>
+                    </div>
+                </div>
+                 <div id="wyniki-placeholder" class="flex items-center justify-center bg-gray-800 p-6 rounded-lg shadow-xl h-full">
+                    <p class="text-gray-500 text-2xl">Wylosowane drużyny pojawią się tutaj...</p>
+                </div>
+            </div>
+            
+            <!-- Full Width Bottom Row: History and Stats -->
+            <div class="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-8">
+                 <!-- History -->
+                <div class="bg-gray-800 p-6 rounded-lg shadow-xl">
+                    <h2 class="text-2xl font-bold mb-4 text-cyan-400">📚 Historia Losowań</h2>
+                    <div id="history" class="space-y-3 max-h-64 overflow-y-auto pr-2"></div>
+                </div>
+                <!-- Stats -->
+                <div class="bg-gray-800 p-6 rounded-lg shadow-xl">
+                     <h2 class="text-2xl font-bold mb-4 text-cyan-400">📊 Statystyki Graczy</h2>
+                    <div class="max-h-64 overflow-y-auto pr-2">
+                        <table class="w-full text-left">
+                            <thead class="sticky top-0 bg-gray-800">
+                                <tr>
+                                    <th class="p-2">Gracz</th>
+                                    <th class="p-2 text-center">Mecze</th>
+                                    <th class="p-2 text-center">Wygrane</th>
+                                    <th class="p-2 text-center">Winrate</th>
+                                </tr>
+                            </thead>
+                            <tbody id="stats"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
     <script>
-        const mdc = mdc.autoInit();
-        const firebaseConfig = {
-            apiKey: "AIzaSyDv3TlaoXP1Jte4rk7G_Oe5-ebaIBiMEJc",
-            authDomain: "kolo-a53dd.firebaseapp.com",
-            projectId: "kolo-a53dd",
-            storageBucket: "kolo-a53dd.firebasestorage.app",
-            messagingSenderId: "40469026968",
-            appId: "1:40469026968:web:6ee82883834e2f05e3d8ed",
-            measurementId: "G-7HDTPRQNMS"
-        };
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
-
-        let gracze = []; 
-        let currentSkład = null; 
-        let currentSkładId = null;
-
-        function init() {
-            db.collection('config').doc('players').onSnapshot(doc => {
-                if (doc.exists && doc.data().list) {
-                    gracze = doc.data().list;
-                } else {
-                    gracze = Array.from({ length: 8 }, (_, i) => `Gracz ${i + 1}`);
-                    db.collection('config').doc('players').set({ list: gracze });
-                }
-                renderPlayersList();
-            });
-
-            db.collection('draws').orderBy('timestamp', 'desc').limit(20).onSnapshot(snapshot => {
-                const historia = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                renderHistory(historia);
-            });
-            
-            db.collection('current_draw').doc('live').onSnapshot(doc => {
-                if (doc.exists) {
-                    currentSkład = doc.data();
-                    currentSkładId = currentSkład.historyId;
-                    renderWyniki();
-                } else {
-                    document.getElementById('wyniki').classList.add('hidden');
-                }
-            });
-
-            db.collection('stats').onSnapshot(snapshot => {
-                const stats = {};
-                snapshot.forEach(doc => {
-                    stats[doc.id] = doc.data();
-                });
-                renderStats(stats);
-            });
-        }
-
-        function renderPlayersList() {
-            const list = document.getElementById('players-list');
-            list.innerHTML = '';
-            const displayGracze = gracze.concat(Array(Math.max(0, 8 - gracze.length)).fill(''));
-            displayGracze.slice(0, 8).forEach((nick, i) => {
-                const textField = document.createElement('div');
-                textField.className = 'mdc-text-field mdc-text-field--filled';
-                textField.innerHTML = '
-                    <span class="mdc-text-field__ripple"></span>
-                    <input id="player' + i + '" class="mdc-text-field__input" value="' + nick + '" placeholder=" ">
-                    <label for="player' + i + '" class="mdc-floating-label">Nick ' + (i + 1) + '</label>
-                    <span class="mdc-line-ripple"></span>
-                ';
-                list.appendChild(textField);
-                mdc.textField.MDCTextField.attachTo(textField);
-            });
-        }
-
-        function savePlayers() {
-            const newGracze = [];
-            for (let i = 0; i < 8; i++) {
-                const nick = document.getElementById('player' + i).value.trim();
-                if(nick) newGracze.push(nick);
-            }
-            if (newGracze.length !== 8) {
-                alert("Potrzeba dokładnie 8 graczy!");
-                return;
-            }
-            db.collection('config').doc('players').set({ list: newGracze })
-                .then(() => showSnackbar('Gracze zapisani w chmurze! ☁️'))
-                .catch(err => console.error("Błąd zapisu graczy: ", err));
-        }
-
-        async function losuj() {
-            if (gracze.length !== 8) {
-                alert("Najpierw zdefiniuj 8 graczy!");
-                return;
-            }
-            const shuffled = [...gracze].sort(() => Math.random() - 0.5);
-            const newSkład = {
-                alfa: shuffled.slice(0, 4),
-                beta: shuffled.slice(4, 8),
-                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                likes: 0,
-                dislikes: 0,
-                votes: {} 
-            };
-
-            try {
-                const historyDocRef = await db.collection('draws').add(newSkład);
-                await db.collection('current_draw').doc('live').set({
-                    ...newSkład,
-                    historyId: historyDocRef.id,
-                    timestamp: new Date().toISOString()
-                });
-            } catch (err) {
-                console.error("Błąd podczas losowania: ", err);
-                alert("Wystąpił błąd, sprawdź konsolę.");
-            }
-        }
-
-        function renderWyniki() {
-            if (!currentSkład) return;
-            document.getElementById('wyniki').classList.remove('hidden');
-            ['alfa', 'beta'].forEach(team => {
-                const cont = document.getElementById(team);
-                cont.innerHTML = '';
-                currentSkład[team].forEach(nick => {
-                    const player = document.createElement('div');
-                    player.className = 'player';
-                    player.innerHTML = `<div style="font-size:1rem;">${nick}</div>`;
-                    cont.appendChild(player);
-                });
-            });
-            updateVoteDisplay();
-            document.getElementById('voting').classList.toggle('hidden', currentSkład.winner);
-            const scoreAEl = document.getElementById('score-alfa');
-            const scoreBEl = document.getElementById('score-beta');
-            if (scoreAEl.mdcTextField) scoreAEl.mdcTextField.value = currentSkład.scoreA || 0;
-            else scoreAEl.value = currentSkład.scoreA || 0;
-            if (scoreBEl.mdcTextField) scoreBEl.mdcTextField.value = currentSkład.scoreB || 0;
-            else scoreBEl.value = currentSkład.scoreB || 0;
-        }
-        
-        async function loadLast() {
-            const lastDrawSnapshot = await db.collection('draws').orderBy('timestamp', 'desc').limit(1).get();
-            if (!lastDrawSnapshot.empty) {
-                const lastDrawDoc = lastDrawSnapshot.docs[0];
-                const lastDrawData = lastDrawDoc.data();
-                await db.collection('current_draw').doc('live').set({
-                    ...lastDrawData,
-                    historyId: lastDrawDoc.id,
-                    timestamp: lastDrawData.timestamp.toDate().toISOString()
-                });
-            } else {
-                alert("Brak historii losowań.");
-            }
-        }
-
-        function vote(isLike) {
-            if (!currentSkładId) return;
-            const updateField = isLike ? 'likes' : 'dislikes';
-            const increment = firebase.firestore.FieldValue.increment(1);
-            db.collection('draws').doc(currentSkładId).update({ [updateField]: increment });
-            db.collection('current_draw').doc('live').update({ [updateField]: increment });
-        }
-        
-        function updateVoteDisplay() {
-            const likes = currentSkład.likes || 0;
-            const dislikes = currentSkład.dislikes || 0;
-            const likeBtn = document.querySelector('#voting button:first-child .mdc-button__label');
-            const dislikeBtn = document.querySelector('#voting button:last-child .mdc-button__label');
-            likeBtn.textContent = `👍 (${likes})`;
-            dislikeBtn.textContent = `👎 (${dislikes})`;
-            document.getElementById('vote-count').textContent = `Głosy: ${likes + dislikes}/8`;
-        }
-
-        async function saveScore() {
-            if (!currentSkładId) {
-                alert("Brak aktywnego losowania do zapisania wyniku.");
-                return;
-            }
-            const scoreA = parseInt(document.getElementById('score-alfa').value) || 0;
-            const scoreB = parseInt(document.getElementById('score-beta').value) || 0;
-
-            if (scoreA === scoreB) {
-                alert("Wynik nie może być remisowy!");
-                return;
-            }
-            const winnerTeamName = scoreA > scoreB ? 'alfa' : 'beta';
-            
-            const updates = { winner: winnerTeamName, scoreA: scoreA, scoreB: scoreB };
-
-            try {
-                await db.collection('draws').doc(currentSkładId).update(updates);
-                await db.collection('current_draw').doc('live').update(updates);
-                await updateStats(currentSkład[winnerTeamName], currentSkład[winnerTeamName === 'alfa' ? 'beta' : 'alfa']);
-                showSnackbar(`🏆 Zapisano: ${scoreA}-${scoreB} (Wygrywa: ${winnerTeamName.toUpperCase()})`);
-            } catch (err) {
-                console.error("Błąd przy zapisie wyniku: ", err);
-            }
-        }
-
-        function updateStats(winners, losers) {
-            const batch = db.batch();
-            winners.forEach(nick => {
-                const statRef = db.collection('stats').doc(nick);
-                batch.set(statRef, {
-                    mecze: firebase.firestore.FieldValue.increment(1),
-                    wygrane: firebase.firestore.FieldValue.increment(1)
-                }, { merge: true });
-            });
-            losers.forEach(nick => {
-                const statRef = db.collection('stats').doc(nick);
-                batch.set(statRef, {
-                    mecze: firebase.firestore.FieldValue.increment(1)
-                }, { merge: true });
-            });
-            return batch.commit();
-        }
-
-        function renderStats(stats) {
-            const tbody = document.getElementById('stats');
-            tbody.innerHTML = '';
-            const sortedStats = Object.entries(stats).map(([nick, data]) => ({
-                nick, ...data,
-                winrate: data.mecze > 0 ? (data.wygrane / data.mecze * 100) : 0
-            })).sort((a, b) => b.winrate - a.winrate);
-
-            sortedStats.forEach(data => {
-                const row = `<tr><td>${data.nick}</td><td>${data.mecze || 0}</td><td>${data.wygrane || 0}</td><td>${data.winrate.toFixed(1)}%</td></tr>`;
-                tbody.innerHTML += row;
-            });
-        }
-        
-        function renderHistory(historia) {
-            const cont = document.getElementById('history');
-            cont.innerHTML = historia.map(s => {
-                const date = s.timestamp?.toDate ? s.timestamp.toDate().toLocaleString('pl-PL') : (s.timestamp || 'Brak daty');
-                return `<div class="history-item">
-                    ${date}<br>
-                    <strong>Alfa:</strong> ${s.alfa.join(', ')}<br>
-                    <strong>Beta:</strong> ${s.beta.join(', ')}
-                    ${s.winner ? `<br><strong>🏆 Wynik: ${s.scoreA}-${s.scoreB} (${s.winner.toUpperCase()})</strong>` : ''}
-                </div>`
-            }).join('');
-        }
-
-        function copyToClipboard() {
-            if (!currentSkład) return;
-            const text = `Alfa 🟢: ${currentSkład.alfa.join(', ')}
-Beta 🔴: ${currentSkład.beta.join(', ')}`;
-            navigator.clipboard.writeText(text).then(() => showSnackbar('Skopiowano do schowka! 📋'));
-        }
-        
-        function showSnackbar(message) {
-            const snackbar = new mdc.snackbar.MDCSnackbar(document.createElement('div'));
-            snackbar.labelText = message;
-            document.body.appendChild(snackbar.root_);
-            snackbar.open();
-        }
-
         document.addEventListener('DOMContentLoaded', () => {
+            // --- DOM Elements ---
+            const playersTextarea = document.getElementById('players-textarea');
+            const savePlayersBtn = document.getElementById('save-players-btn');
+            const playerError = document.getElementById('player-error');
+            const losujBtn = document.getElementById('losuj-btn');
+            const loadLastBtn = document.getElementById('load-last-btn');
+            const wynikiDiv = document.getElementById('wyniki');
+            const wynikiPlaceholder = document.getElementById('wyniki-placeholder');
+            const alfaDiv = document.getElementById('alfa');
+            const betaDiv = document.getElementById('beta');
+            const alfaCard = document.getElementById('alfa-card');
+            const betaCard = document.getElementById('beta-card');
+            const scoreAlfaInput = document.getElementById('score-alfa');
+            const scoreBetaInput = document.getElementById('score-beta');
+            const saveScoreBtn = document.getElementById('save-score-btn');
+            const copyBtn = document.getElementById('copy-btn');
+            const historyDiv = document.getElementById('history');
+            const statsTbody = document.getElementById('stats');
+
+            // --- Firebase Setup ---
+            const firebaseConfig = {
+                apiKey: "AIzaSyDv3TlaoXP1Jte4rk7G_Oe5-ebaIBiMEJc",
+                authDomain: "kolo-a53dd.firebaseapp.com",
+                projectId: "kolo-a53dd",
+                storageBucket: "kolo-a53dd.firebasestorage.app",
+                messagingSenderId: "40469026968",
+                appId: "1:40469026968:web:6ee82883834e2f05e3d8ed",
+                measurementId: "G-7HDTPRQNMS"
+            };
+            firebase.initializeApp(firebaseConfig);
+            const db = firebase.firestore();
+
+            // --- App State ---
+            let gracze = []; 
+            let currentSkład = null; 
+            let currentSkładId = null;
+
+            // --- Event Listeners ---
+            savePlayersBtn.addEventListener('click', savePlayers);
+            losujBtn.addEventListener('click', losuj);
+            loadLastBtn.addEventListener('click', loadLast);
+            saveScoreBtn.addEventListener('click', saveScore);
+            copyBtn.addEventListener('click', copyToClipboard);
+
+            // --- Core Functions ---
+            function init() {
+                // Player listener
+                db.collection('config').doc('players').onSnapshot(doc => {
+                    if (doc.exists && doc.data().list) {
+                        gracze = doc.data().list;
+                        renderPlayersList();
+                    } else {
+                        // Create default if doesn't exist
+                        const defaultGracze = Array.from({ length: 8 }, (_, i) => `Gracz ${i + 1}`);
+                        db.collection('config').doc('players').set({ list: defaultGracze });
+                    }
+                });
+
+                // History listener
+                db.collection('draws').orderBy('timestamp', 'desc').limit(20).onSnapshot(snapshot => {
+                    const historia = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    renderHistory(historia);
+                });
+                
+                // Current draw listener
+                db.collection('current_draw').doc('live').onSnapshot(doc => {
+                    if (doc.exists) {
+                        currentSkład = doc.data();
+                        currentSkładId = currentSkład.historyId;
+                        renderWyniki();
+                    } else {
+                        wynikiDiv.classList.add('hidden');
+                        wynikiPlaceholder.classList.remove('hidden');
+                    }
+                });
+
+                // Stats listener
+                db.collection('stats').onSnapshot(snapshot => {
+                    const stats = {};
+                    snapshot.forEach(doc => {
+                        stats[doc.id] = doc.data();
+                    });
+                    renderStats(stats);
+                });
+            }
+
+            // --- Player Management ---
+            function renderPlayersList() {
+                if (gracze.length > 0) {
+                    playersTextarea.value = gracze.join('\n');
+                }
+            }
+
+            function savePlayers() {
+                const namesText = playersTextarea.value;
+                const parsedNames = namesText.split('\n')
+                                            .map(name => name.trim())
+                                            .filter(name => name.length > 0);
+                
+                const uniqueNames = [...new Set(parsedNames)];
+
+                if (uniqueNames.length < 2) {
+                    playerError.textContent = 'Wprowadź co najmniej 2 graczy.';
+                    return;
+                }
+                
+                playerError.textContent = '';
+                db.collection('config').doc('players').set({ list: uniqueNames })
+                    .then(() => console.log('Gracze zapisani!'))
+                    .catch(err => playerError.textContent = 'Błąd zapisu.');
+            }
+
+            // --- Randomization and Game Flow ---
+            function losuj() {
+                if (gracze.length % 2 !== 0) {
+                    alert("Liczba graczy musi być parzysta!");
+                    return;
+                }
+                if (gracze.length < 2) {
+                    alert("Potrzeba co najmniej 2 graczy do losowania!");
+                    return;
+                }
+
+                const shuffled = [...gracze].sort(() => Math.random() - 0.5);
+                const half = shuffled.length / 2;
+                const newSkład = {
+                    alfa: shuffled.slice(0, half),
+                    beta: shuffled.slice(half, shuffled.length),
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                };
+
+                db.collection('draws').add(newSkład)
+                    .then(historyDocRef => {
+                        db.collection('current_draw').doc('live').set({
+                            ...newSkład,
+                            historyId: historyDocRef.id,
+                            timestamp: new Date().toISOString()
+                        });
+                    })
+                    .catch(err => console.error("Błąd podczas losowania: ", err));
+            }
+
+            async function loadLast() {
+                const lastDrawSnapshot = await db.collection('draws').orderBy('timestamp', 'desc').limit(1).get();
+                if (!lastDrawSnapshot.empty) {
+                    const lastDrawDoc = lastDrawSnapshot.docs[0];
+                    const lastDrawData = lastDrawDoc.data();
+                    db.collection('current_draw').doc('live').set({
+                        ...lastDrawData,
+                        historyId: lastDrawDoc.id,
+                        timestamp: lastDrawData.timestamp.toDate().toISOString()
+                    });
+                } else {
+                    alert("Brak historii losowań.");
+                }
+            }
+
+            // --- Rendering ---
+            function renderWyniki() {
+                if (!currentSkład) return;
+                
+                wynikiDiv.classList.remove('hidden');
+                wynikiPlaceholder.classList.add('hidden');
+
+                alfaDiv.innerHTML = currentSkład.alfa.map(nick => `<p>${nick}</p>`).join('');
+                betaDiv.innerHTML = currentSkład.beta.map(nick => `<p>${nick}</p>`).join('');
+
+                // Highlight winning team
+                alfaCard.classList.remove('team-alfa');
+                betaCard.classList.remove('team-beta');
+                if (currentSkład.winner) {
+                    if (currentSkład.winner === 'alfa') {
+                        alfaCard.classList.add('team-alfa');
+                    } else {
+                        betaCard.classList.add('team-beta');
+                    }
+                }
+                
+                scoreAlfaInput.value = currentSkład.scoreA || 0;
+                scoreBetaInput.value = currentSkład.scoreB || 0;
+            }
+
+            function renderHistory(historia) {
+                if (historia.length === 0) {
+                    historyDiv.innerHTML = '<p class="text-gray-500">Brak historii.</p>';
+                    return;
+                }
+                historyDiv.innerHTML = historia.map(s => {
+                    const date = s.timestamp?.toDate ? s.timestamp.toDate().toLocaleString('pl-PL') : 'Brak daty';
+                    const winnerInfo = s.winner ? `<p class="font-bold mt-1">🏆 Wygrany: ${s.winner.toUpperCase()} (${s.scoreA}-${s.scoreB})</p>` : '';
+                    return `<div class="bg-gray-900 p-3 rounded-md">
+                        <p class="text-sm text-gray-400">${date}</p>
+                        <p class="font-semibold text-green-400">Alfa: ${s.alfa.join(', ')}</p>
+                        <p class="font-semibold text-red-400">Beta: ${s.beta.join(', ')}</p>
+                        ${winnerInfo}
+                    </div>`
+                }).join('');
+            }
+            
+            function renderStats(stats) {
+                const sortedStats = Object.entries(stats).map(([nick, data]) => ({
+                    nick, ...data,
+                    winrate: (data.mecze && data.wygrane) ? (data.wygrane / data.mecze * 100) : 0
+                })).sort((a, b) => b.winrate - a.winrate);
+
+                if (sortedStats.length === 0) {
+                    statsTbody.innerHTML = '<tr><td colspan="4" class="text-center text-gray-500 py-4">Brak statystyk.</td></tr>';
+                    return;
+                }
+
+                statsTbody.innerHTML = sortedStats.map(data => `
+                    <tr class="border-b border-gray-700">
+                        <td class="p-2 font-semibold">${data.nick}</td>
+                        <td class="p-2 text-center">${data.mecze || 0}</td>
+                        <td class="p-2 text-center">${data.wygrane || 0}</td>
+                        <td class="p-2 text-center font-semibold ${data.winrate > 50 ? 'text-green-400' : 'text-red-400'}">${data.winrate.toFixed(1)}%</td>
+                    </tr>
+                `).join('');
+            }
+
+            // --- Scoring and Utils ---
+            async function saveScore() {
+                if (!currentSkładId) return;
+
+                const scoreA = parseInt(scoreAlfaInput.value) || 0;
+                const scoreB = parseInt(scoreBetaInput.value) || 0;
+
+                if (scoreA === scoreB) {
+                    alert("Wynik nie może być remisowy!");
+                    return;
+                }
+                const winnerTeamName = scoreA > scoreB ? 'alfa' : 'beta';
+                
+                const updates = { winner: winnerTeamName, scoreA, scoreB };
+
+                try {
+                    await db.collection('draws').doc(currentSkładId).update(updates);
+                    await db.collection('current_draw').doc('live').update(updates);
+                    await updateStats(currentSkład[winnerTeamName], currentSkład[winnerTeamName === 'alfa' ? 'beta' : 'alfa']);
+                } catch (err) {
+                    console.error("Błąd przy zapisie wyniku: ", err);
+                }
+            }
+
+            function updateStats(winners, losers) {
+                const batch = db.batch();
+                winners.forEach(nick => {
+                    const statRef = db.collection('stats').doc(nick);
+                    batch.set(statRef, {
+                        mecze: firebase.firestore.FieldValue.increment(1),
+                        wygrane: firebase.firestore.FieldValue.increment(1)
+                    }, { merge: true });
+                });
+                losers.forEach(nick => {
+                    const statRef = db.collection('stats').doc(nick);
+                    batch.set(statRef, {
+                        mecze: firebase.firestore.FieldValue.increment(1)
+                        // Note: we don't increment 'wygrane' for losers
+                    }, { merge: true });
+                });
+                return batch.commit();
+            }
+
+            function copyToClipboard() {
+                if (!currentSkład) return;
+                const text = `Alfa 🟢: ${currentSkład.alfa.join(', ')}
+Beta 🔴: ${currentSkład.beta.join(', ')}`;
+                navigator.clipboard.writeText(text).then(() => alert('Skopiowano do schowka!'));
+            }
+
+            // --- Initial Load ---
             init();
         });
     </script>
-    <div class="mdc-snackbar">
-        <div class="mdc-snackbar__surface">
-            <div class="mdc-snackbar__label" role="status" aria-live="polite"></div>
-        </div>
-    </div>
 </body>
 </html>
